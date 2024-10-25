@@ -1,14 +1,14 @@
 /*
- Banking System
- Description: Create a basic banking system that allows users to create accounts, deposit, withdraw, and check balances.
- Acceptance Criteria:
- 1- Classes for Account (Saving Account & Current Account), Transaction and User
- 2- Account Types should be ENUM
- 3- Saving can calculate interest per month ((Balance * Rate) / 12)
- Technical Requirements:
- 1- OOP Concepts
- 2- SOLID Principles
- 3- Clean Code
+Banking System
+   Description: Create a basic banking system that allows users to create accounts, deposit, withdraw, and check balances.
+   Acceptance Criteria:
+      1- Classes for Account (Saving Account & Current Account), Transaction and User
+      2- Account Types should be ENUM
+      3- Saving can calculate interest per month ((Balance * Rate) / 12)
+   Technical Requirements:
+      1- OOP Concepts
+      2- SOLID Principles
+      3- Clean Code
  */
 
 import Foundation
@@ -48,53 +48,27 @@ final class User {
 class Account {
     private var balance: Double
     var accountType: AccountType
-    var transactions: [Transaction] = []
+    private var transactions: [Transaction] = []
     
     init(balance: Double, accountType: AccountType) {
         self.balance = balance
         self.accountType = accountType
     }
     
-    func deposit(amount: Double) -> Transaction {
-        balance += amount
-        let transaction = Transaction(date: Date(), type: .deposit, amount: amount, status: .success)
-        transactions.append(transaction)
-        return transaction
-    }
-    
-    func withdraw(amount: Double) -> Transaction {
-        if amount <= balance {
-            balance -= amount
-            let transaction = Transaction(date: Date(), type: .withdrawal, amount: amount, status: .success)
-            transactions.append(transaction)
-            return transaction
-        } else {
-            let transaction = Transaction(date: Date(), type: .withdrawal, amount: amount, status: .failed)
-            transactions.append(transaction)
-            return transaction
-        }
-    }
-    
     func getBalance() -> Double {
         return balance
     }
-}
-
-final class Transaction {
-    var date: Date
-    var type: TransactionType
-    var amount: Double
-    var status: TransactionStatus
     
-    init(date: Date, type: TransactionType, amount: Double, status: TransactionStatus) {
-        self.date = date
-        self.type = type
-        self.amount = amount
-        self.status = status
+    func updateBalance(_ balance: Double) {
+        self.balance = balance
     }
     
-    func transactionDetails() -> String {
-        return "Date: \(date), Type: \(type), Amount: \(amount), Status: \(status)"
+    func makeTransaction(_ transaction: Transaction) {
+        transactions.append(transaction)
+    }
+    
+    func getTransactions() -> [Transaction] {
+        return transactions
     }
 }
 
@@ -117,24 +91,97 @@ final class CurrentAccount: Account {
     }
 }
 
-let savingAccount = SavingAccount(rate: 0.07, balance: 5000)
-let user1 = User(name: "Dalia")
-user1.addAccount(account: savingAccount)
+struct DepositManger {
+    func deposit(
+        account: Account,
+        amount: Double
+    ) -> Transaction {
+        let newBalance = account.getBalance() + amount
+        account.updateBalance(newBalance)
+        let transaction = Transaction(type: .deposit, amount: amount, status: .success)
+        account.makeTransaction(transaction)
 
-let transaction1 = user1.getAccounts()[0].withdraw(amount: 20000)
-let transaction2 = user1.getAccounts()[0].deposit(amount: 15000)
-let transaction3 = user1.getAccounts()[0].withdraw(amount: 25000)
+        return transaction
+    }
+}
+
+struct WithdrawalManager {
+    func withdraw(
+        account: Account,
+        amount: Double
+    ) -> Transaction {
+        if amount <= account.getBalance() {
+            let newBalance = account.getBalance() - amount
+            account.updateBalance(newBalance)
+            let transaction = Transaction(type: .withdrawal, amount: amount, status: .success)
+            account.makeTransaction(transaction)
+
+            return transaction
+        } else {
+            let transaction = Transaction(type: .withdrawal, amount: amount, status: .failed)
+            account.makeTransaction(transaction)
+
+            return transaction
+        }
+    }
+}
+
+final class Transaction {
+    var date: Date
+    var type: TransactionType
+    var amount: Double
+    var status: TransactionStatus
+    
+    init(type: TransactionType, amount: Double, status: TransactionStatus) {
+        self.date = Date()
+        self.type = type
+        self.amount = amount
+        self.status = status
+    }
+    
+    func transactionDetails() -> String {
+        return "Date: \(date), Type: \(type), Amount: \(amount), Status: \(status)"
+    }
+}
+
+let user = User(name: "Dalia")
+
+let savingAccount = SavingAccount(rate: 0.07, balance: 5000)
+user.addAccount(account: savingAccount)
 
 let currentAccount = CurrentAccount(balance: 2000)
-user1.addAccount(account: currentAccount)
-let transaction4 = user1.getAccounts()[1].deposit(amount: 15000)
+user.addAccount(account: currentAccount)
 
-print("\(user1.name) Transactions:")
-for account in user1.getAccounts() {
-    for transaction in account.transactions {
+let primaryAccount = user.getAccounts()[0]
+let secondaryAccount = user.getAccounts()[1]
+
+let withdrawalManager = WithdrawalManager()
+let depositeManager = DepositManger()
+
+let withdrawalTransaction1 = depositeManager.deposit(
+    account: primaryAccount,
+    amount: 15000
+)
+print("Transaction Status: [\(withdrawalTransaction1.status)]")
+
+let withdrawalTransaction2 = withdrawalManager.withdraw(
+    account: primaryAccount,
+    amount: 20000
+)
+print("Transaction Status: [\(withdrawalTransaction2.status)]")
+
+let transaction3 = withdrawalManager.withdraw(
+    account: secondaryAccount,
+    amount: 20000
+)
+print("Transaction: [\(transaction3.status)]")
+
+print("\(user.name) Transactions:")
+for account in user.getAccounts() {
+    for transaction in account.getTransactions() {
         print(transaction.transactionDetails())
     }
 }
 
-let rate1 = savingAccount.calculateMonthlyRate()
-print("Monthly Interest: \(rate1)")
+let monthlyInterest = savingAccount.calculateMonthlyRate()
+print("Monthly Interest: \(monthlyInterest)")
